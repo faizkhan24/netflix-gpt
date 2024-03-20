@@ -1,63 +1,158 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Header from "./Header";
+import { checkValidData } from "../utils/validate";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile,
+} from "firebase/auth";
+import { auth } from "../utils/firebase";
+import { useDispatch } from "react-redux";
+import { addUser } from "../utils/userSlice";
+import { BGIMAGE } from "../utils/constants";
+import { USER_AVATAR } from "../utils/constants";
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
+// import { BG_URL, USER_AVATAR } from "../utils/constants";
 
 const Login = () => {
-  const [isSignInForm, setIsSignForm] = useState(true);
+  const [isSignInForm, setIsSignInForm] = useState(true);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const dispatch = useDispatch();
+
+  const togglePasswordVisibility = () =>{
+    // !prevState toggles the value of showPassword, effectively switching between true and false.
+    setShowPassword(prevState => !prevState);
+  }
+
+  const name = useRef(null);
+  const email = useRef(null);
+  const password = useRef(null);
+
+  const handleButtonClick = () => {
+    const message = checkValidData(email.current.value, password.current.value);
+    setErrorMessage(message);
+    if (message) return;
+
+    if (!isSignInForm) {
+      createUserWithEmailAndPassword(
+        auth,
+        email.current.value,
+        password.current.value
+      )
+        .then((userCredential) => {
+          // Signed up
+          const user = userCredential.user;
+          updateProfile(user, {
+            displayName: name.current.value, photoURL: USER_AVATAR
+          }).then(() => {
+            // Profile updated!
+            const { uid, email, displayName, photoURL } = auth.currentUser;
+            dispatch(
+              addUser({
+                uid: uid,
+                email: email,
+                displayName: displayName,
+                photoURL: photoURL,
+              })
+            );
+
+            // ...
+          }).catch((error) => {
+           setErrorMessage(error.message)
+          });
+     
+          
+        })
+        .catch((error) => {
+          const errorCode = error.code;
+          const errorMessage = error.message;
+          // ..
+          setErrorMessage(errorCode + "-" + errorMessage);
+        });
+    }  else {
+      // Sign In Logic
+      signInWithEmailAndPassword(
+        auth,
+        email.current.value,
+        password.current.value
+      )
+        .then((userCredential) => {
+          // Signed in
+          const user = userCredential.user;
+        })
+        .catch((error) => {
+          const errorCode = error.code;
+          const errorMessage = error.message;
+          setErrorMessage(errorCode + "-" + errorMessage);
+        });
+    }
+  };
 
   const toggleSignInForm = () => {
-    setIsSignForm(!isSignInForm);
+    setIsSignInForm(!isSignInForm);
   };
   return (
     <div>
       <Header />
-      <div>
-        <img
-          className="absolute h-full w-full"
-          src="https://assets.nflxext.com/ffe/siteui/vlv3/93da5c27-be66-427c-8b72-5cb39d275279/94eb5ad7-10d8-4cca-bf45-ac52e0a052c0/IN-en-20240226-popsignuptwoweeks-perspective_alpha_website_large.jpg"
-          alt="bg-image"
-        ></img>
-        <div className="absolute inset-0  bg-black opacity-60"></div>
+      <div className="absolute">
+        <img className="h-screen w-screen object-cover" src={BGIMAGE} alt="logo" />
       </div>
-      <div>
-        <form className="absolute px-[4.25rem] py-[3.75rem] bg-opacity-70 bg-black rounded-md  w-[28.125rem] h-[41.25rem] my-36 mx-auto right-0 left-0 text-white">
-          <h1 className="text-white font-bold  text-3xl py-4">
-            {isSignInForm ? "Sign In" : "Sign Up"}
-          </h1>
-          {!isSignInForm && (
-            <input
-              type="text"
-              placeholder="Enter Username"
-              className="py-4 w-[19.625rem] h-[3.125rem] px-5 my-4  bg-[#333333]  placeholder-[#8c8c8c] text-[16px] rounded-md"
-            />
-          )}
+      <form
+        onSubmit={(e) => e.preventDefault()}
+        className="w-full md:w-3/12 absolute p-12 bg-black my-36 mx-auto right-0 left-0 text-white rounded-lg bg-opacity-80"
+      >
+        <h1 className="font-bold text-3xl py-4">
+          {isSignInForm ? "Sign In" : "Sign Up"}
+        </h1>
 
+        {!isSignInForm && (
           <input
-            type="email"
-            placeholder="Email Address"
-            className="py-4 px-5 my-4 w-[19.625rem] h-[3.125rem] bg-[#333333]  placeholder-[#8c8c8c] text-[16px] rounded-md"
+            ref={name}
+            type="text"
+            placeholder="Full Name"
+            className="p-4 my-4 w-full bg-gray-700"
           />
-          <input
-            type="password"
-            placeholder="Password"
-            className="py-4 my-4 px-5 w-[19.625rem] h-[3.125rem] bg-[#333333] placeholder-[#8c8c8c] text-[16px] rounded-md"
+        )}
+        <input
+          ref={email}
+          type="text"
+          placeholder="Email Address"
+          className="p-4 my-4 w-full bg-gray-700"
+        />
+         <div className="relative">
+        <input
+          ref={password}
+          type={showPassword ? 'text' : 'password'}
+          placeholder="Password"
+          className="p-4 my-4 w-full bg-gray-700"
+        />
+        {showPassword ? (
+          <FaEyeSlash
+            onClick={togglePasswordVisibility}
+            className="absolute top-1/2 transform -translate-y-1/2 right-4 text-gray-400 cursor-pointer"
           />
-          <button className="py-4 my-8 bg-[#e50914] font-bold rounded-md w-[19.625rem] h-[3.125rem]">
-            {isSignInForm ? "Sign In" : "Sign Up"}
-          </button>
-          <p
-            className="py-2 cursor-pointer text-[#8c8c8c]"
-            onClick={toggleSignInForm}
-          >
-            {isSignInForm ? " New to Netflix?" : "Already an User?"}
-            <span className="text-white">
-              {" "}
-              {isSignInForm ? "Sign Up Now" : "Sign In Now"}
-            </span>
-          </p>
-        </form>
+        ) : (
+          <FaEye
+            onClick={togglePasswordVisibility}
+            className="absolute top-1/2 transform -translate-y-1/2 right-4 text-gray-400 cursor-pointer"
+          />
+        )}
       </div>
+        <p className="text-red-500 font-bold text-lg py-2">{errorMessage}</p>
+        <button
+          className="p-4 my-6 bg-red-700 w-full rounded-lg"
+          onClick={handleButtonClick}
+        >
+          {isSignInForm ? "Sign In" : "Sign Up"}
+        </button>
+        <p className="py-4 cursor-pointer" onClick={toggleSignInForm}>
+          {isSignInForm
+            ? "New to Netflix? Sign Up Now"
+            : "Already registered? Sign In Now."}
+        </p>
+      </form>
     </div>
   );
 };
-
 export default Login;
