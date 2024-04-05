@@ -7,7 +7,9 @@ const useTopRated = () => {
   // Fetch Data from TMDB API and update store
   const dispatch = useDispatch();
 
-
+  const topRated = useSelector(
+    (store) => store.movies.topRatedMovies
+  );
 
   const getTopRated = async () => {
     const data = await fetch(
@@ -19,7 +21,7 @@ const useTopRated = () => {
   };
 
   useEffect(() => {
-  getTopRated();
+ !topRated && getTopRated();
   }, []);
 };
 

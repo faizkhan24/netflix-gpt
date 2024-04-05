@@ -6,6 +6,9 @@ import { addUpcomingMovies } from "../utils/moviesSlice";
 const useUpcomingMovies = () => {
   // Fetch Data from TMDB API and update store
   const dispatch = useDispatch();
+  const upcomingMovies = useSelector(
+    (store) => store.movies.upcomingMovies
+  );
 
   const getUpcomingMovies = async () => {
     const data = await fetch(
@@ -17,7 +20,7 @@ const useUpcomingMovies = () => {
   };
 
   useEffect(() => {
-    getUpcomingMovies();
+   !upcomingMovies && getUpcomingMovies();
   }, []);
 };
 
